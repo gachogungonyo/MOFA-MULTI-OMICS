@@ -165,7 +165,15 @@ for (omics_name in names(omics_list)) {
 }
 
 
-# pca plot per view covariate
+
+# fixing increctly saved plots. cleaning the folder
+if (dir.exists("plots")) {
+  file.remove(list.files("plots", full.names = TRUE))
+} else {
+  dir.create("plots")
+}
+
+#PCA plots 
 for (omics_name in names(pca_results)) {
   pca_df <- pca_results[[omics_name]]
   for (cov in covariates) {
@@ -185,7 +193,7 @@ for (omics_name in names(pca_results)) {
   }
 }
 
-# histograms for numeric covariates
+# Histograms for numeric covariates 
 numeric_covariates <- c("age", "tumor_size", "TTT", "TTD")
 
 for (cov in numeric_covariates) {
@@ -196,12 +204,12 @@ for (cov in numeric_covariates) {
   print(p)
   
   ggsave(
-    filename = file.path("plots", paste0(omics_name, "_PCA_", cov, ".png")),
+    filename = file.path("plots", paste0("hist_", cov, ".png")),
     plot = p, width = 8, height = 6, dpi = 300
   )
 }
 
-# bar plots for categorical covariates
+# Bar plots for categorical covariates 
 categorical_covariates <- c("stage", "gender", "smoking_history",
                             "histology_grouped", "treatedAfter", "Died")
 
@@ -214,8 +222,7 @@ for (cov in categorical_covariates) {
   print(p)
   
   ggsave(
-    filename = file.path("plots", paste0(omics_name, "_PCA_", cov, ".png")),
+    filename = file.path("plots", paste0("bar_", cov, ".png")),
     plot = p, width = 8, height = 6, dpi = 300
   )
 }
-
