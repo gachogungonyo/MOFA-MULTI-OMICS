@@ -1,4 +1,4 @@
-# 2 load libraries and data
+#  load libraries and data
 library(reticulate)
 library(ggplot2)
 library(MOFA2)
@@ -8,16 +8,16 @@ cptac <- import("cptac")
 luad <- cptac$Luad()
 luad$list_data_sources()
 
-# 2 clinical data pulled first for covariates
+# clinical data pulled first for covariates
 clin_df <- py_to_r(luad$get_clinical(source = "mssm"))
 str(clin_df)
 colnames(clin_df)
 
-# 2 build stage df with sample column
+# build stage df with sample column
 stage_df <- data.frame(sample = rownames(clin_df),
                        stage = clin_df$tumor_stage_pathological)
 
-# 2 add cll style covariates matching own naming
+# add cll style covariates matching own naming
 age_df <- data.frame(sample = rownames(clin_df), age = clin_df$age)
 gender_df <- data.frame(sample = rownames(clin_df), gender = clin_df$sex)
 histology_df <- data.frame(sample = rownames(clin_df),
@@ -35,13 +35,13 @@ TTD_df <- data.frame(sample = rownames(clin_df),
 Died_df <- data.frame(sample = rownames(clin_df),
                       Died = clin_df$`Survival status (1, dead; 0, alive)` == 1)
 
-# 2 merge all covariates into one metadata table
+# merge all covariates into one metadata table
 stage_df <- Reduce(function(x, y) merge(x, y, by = "sample", all = TRUE),
                    list(stage_df, age_df, gender_df, histology_df,
                         smoking_df, tumor_size_df, TTT_df,
                         treatedAfter_df, TTD_df, Died_df))
 
-# 2 clean covariate types before use
+# clean covariate types before use
 stage_df$age <- as.numeric(stage_df$age)
 stage_df$stage <- factor(stage_df$stage,
                          levels = c("Stage I", "Stage II", "Stage III", "Stage IV"),
@@ -49,7 +49,7 @@ stage_df$stage <- factor(stage_df$stage,
 stage_df$gender <- as.factor(stage_df$gender)
 stage_df$smoking_history <- as.factor(stage_df$smoking_history)
 
-# 2 collapse histology into broader groups
+# collapse histology into broader groups
 stage_df$histology_grouped <- dplyr::case_when(
   grepl("squamous", stage_df$histology, ignore.case = TRUE) &
     grepl("adeno", stage_df$histology, ignore.case = TRUE) ~ "Adenosquamous",
@@ -61,8 +61,8 @@ stage_df$histology_grouped <- dplyr::case_when(
 stage_df$histology_grouped <- as.factor(stage_df$histology_grouped)
 table(stage_df$histology_grouped, useNA = "ifany")
 
-# 2 error janitor package not installed
-# 2 solution write small base r cleaner instead
+# error janitor package not installed
+# solution write small base r cleaner instead
 clean_names_base <- function(x) {
   x <- tolower(x)
   x <- gsub("[^a-z0-9]+", "_", x)
@@ -70,28 +70,28 @@ clean_names_base <- function(x) {
   x
 }
 
-# 2 pull cnv omics table
+# pull cnv omics table
 cnv_df <- py_to_r(luad$get_CNV(source = "washu"))
 cnv_df <- as.data.frame(apply(cnv_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 cnv_df_v <- cnv_df[, apply(cnv_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull circular rna omics table
+# pull circular rna omics table
 circrna_df <- py_to_r(luad$get_circular_RNA(source = "bcm"))
 circrna_df <- as.data.frame(apply(circrna_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 circrna_df_v <- circrna_df[, apply(circrna_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull mirna omics table
+# pull mirna omics table
 mirna_df <- py_to_r(luad$get_miRNA(source = "washu"))
 mirna_df <- as.data.frame(apply(mirna_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 mirna_df_v <- mirna_df[, apply(mirna_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull proteomics omics table
+# pull proteomics omics table
 prot_df <- py_to_r(luad$get_proteomics(source = "umich"))
 prot_df <- as.data.frame(apply(prot_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
