@@ -131,9 +131,19 @@ covariates <- c("stage", "age", "gender", "smoking_history",
 
 # run pca per omics view
 pca_results <- list()
-
 for (omics_name in names(omics_list)) {
   df <- omics_list[[omics_name]]
+  
+  # remove zero-variance columns before PCA
+  zero_var_cols <- sapply(df, function(x) {
+    x <- x[!is.na(x)]
+    length(x) == 0 || var(x) == 0
+  })
+  if (sum(zero_var_cols) > 0) {
+    cat(omics_name, "- removing", sum(zero_var_cols), "zero-variance columns\n")
+    df <- df[, !zero_var_cols]
+  }
+  
   pca <- prcomp(df, scale. = TRUE, center = TRUE)
   pca_df <- data.frame(
     sample = rownames(df),
@@ -143,6 +153,7 @@ for (omics_name in names(omics_list)) {
   pca_df <- merge(pca_df, stage_df, by = "sample")
   pca_results[[omics_name]] <- pca_df
 }
+
 
 # pca plot per view covariate
 for (omics_name in names(pca_results)) {
@@ -164,7 +175,7 @@ numeric_covariates <- c("age", "tumor_size", "TTT", "TTD")
 
 for (cov in numeric_covariates) {
   p <- ggplot(stage_df, aes(x = .data[[cov]])) +
-    geom_histogram(bins = 20, fill = "#8E24AA", color = "white", na.rm = TRUE) +
+    geom_histogram(bins = 20, fill = "#FF69B4", color = "white", na.rm = TRUE) +
     labs(title = paste("distribution of", cov), x = cov, y = "count") +
     theme_bw()
   print(p)
@@ -176,9 +187,10 @@ categorical_covariates <- c("stage", "gender", "smoking_history",
 
 for (cov in categorical_covariates) {
   p <- ggplot(stage_df, aes(x = .data[[cov]])) +
-    geom_bar(fill = "#8E24AA", na.rm = TRUE) +
+    geom_bar(fill = "#FF69B4", na.rm = TRUE) +
     labs(title = paste("distribution of", cov), x = cov, y = "count") +
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   print(p)
 }
+
