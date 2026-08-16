@@ -126,6 +126,16 @@ omics_list <- list(
   Transcriptomics   = rna_df_v
 )
 
+#saving files
+dir.create("dataframes", showWarnings = FALSE)
+
+df_names <- Filter(function(x) is.data.frame(get(x, envir = .GlobalEnv)), ls(envir = .GlobalEnv))
+#as rds
+for (name in df_names) {
+  saveRDS(get(name), file = file.path("dataframes", paste0(name, ".rds")))
+}
+
+#adding covariates
 covariates <- c("stage", "age", "gender", "smoking_history",
                 "tumor_size", "histology_grouped", "Died")
 
@@ -167,6 +177,11 @@ for (omics_name in names(pca_results)) {
       ) +
       theme_bw()
     print(p)
+    
+    ggsave(
+      filename = file.path("plots", paste0(omics_name, "_PCA_", cov, ".png")),
+      plot = p, width = 8, height = 6, dpi = 300
+    )
   }
 }
 
@@ -179,6 +194,11 @@ for (cov in numeric_covariates) {
     labs(title = paste("distribution of", cov), x = cov, y = "count") +
     theme_bw()
   print(p)
+  
+  ggsave(
+    filename = file.path("plots", paste0(omics_name, "_PCA_", cov, ".png")),
+    plot = p, width = 8, height = 6, dpi = 300
+  )
 }
 
 # bar plots for categorical covariates
@@ -192,5 +212,10 @@ for (cov in categorical_covariates) {
     theme_bw() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
   print(p)
+  
+  ggsave(
+    filename = file.path("plots", paste0(omics_name, "_PCA_", cov, ".png")),
+    plot = p, width = 8, height = 6, dpi = 300
+  )
 }
 
