@@ -1,2 +1,3 @@
-# MOFA-MULTI-OMICS ANALYSIS OF Lung Adenocarcinoma (cptac data) using R 
+# MOFA-MULTI-OMICS 
+## Analysis of Lung Adenocarcinoma (cptac data) using R 
 
