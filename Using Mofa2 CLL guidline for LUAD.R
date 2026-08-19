@@ -1,6 +1,5 @@
-#  load libraries and data
+#  loading libraries and data
 library(reticulate)
-library(ggplot2)
 library(MOFA2)
 
 py_require("cptac")
@@ -8,16 +7,16 @@ cptac <- import("cptac")
 luad <- cptac$Luad()
 luad$list_data_sources()
 
-# clinical data pulled first for covariates
+# clinical data pulling first for covariates
 clin_df <- py_to_r(luad$get_clinical(source = "mssm"))
 str(clin_df)
 colnames(clin_df)
 
-# build stage df with sample column
+# building stage df with sample column
 stage_df <- data.frame(sample = rownames(clin_df),
                        stage = clin_df$tumor_stage_pathological)
 
-# add cll style covariates
+# adding cll style covariates
 age_df <- data.frame(sample = rownames(clin_df), age = clin_df$age)
 gender_df <- data.frame(sample = rownames(clin_df), gender = clin_df$sex)
 histology_df <- data.frame(sample = rownames(clin_df),
@@ -35,13 +34,13 @@ TTD_df <- data.frame(sample = rownames(clin_df),
 Died_df <- data.frame(sample = rownames(clin_df),
                       Died = clin_df$`Survival status (1, dead; 0, alive)` == 1)
 
-# merge all covariates into one metadata table
+# merging into one metadata table
 stage_df <- Reduce(function(x, y) merge(x, y, by = "sample", all = TRUE),
                    list(stage_df, age_df, gender_df, histology_df,
                         smoking_df, tumor_size_df, TTT_df,
                         treatedAfter_df, TTD_df, Died_df))
 
-# clean covariate types 
+# cleaning covariate types 
 stage_df$age <- as.numeric(stage_df$age)
 stage_df$stage <- factor(stage_df$stage,
                          levels = c("Stage I", "Stage II", "Stage III", "Stage IV"),
@@ -49,7 +48,7 @@ stage_df$stage <- factor(stage_df$stage,
 stage_df$gender <- as.factor(stage_df$gender)
 stage_df$smoking_history <- as.factor(stage_df$smoking_history)
 
-# collapse histology into broader groups
+#collapsing histology into broader groups
 stage_df$histology_grouped <- dplyr::case_when(
   grepl("squamous", stage_df$histology, ignore.case = TRUE) &
     grepl("adeno", stage_df$histology, ignore.case = TRUE) ~ "Adenosquamous",
@@ -61,59 +60,59 @@ stage_df$histology_grouped <- dplyr::case_when(
 stage_df$histology_grouped <- as.factor(stage_df$histology_grouped)
 table(stage_df$histology_grouped, useNA = "ifany")
 
+#creating omics dfs
 
-
-# pull cnv omics table
+#cnv 
 cnv_df <- py_to_r(luad$get_CNV(source = "washu"))
 cnv_df <- as.data.frame(apply(cnv_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 cnv_df_v <- cnv_df[, apply(cnv_df, 2, var, na.rm = TRUE) > 0]
 
-# pull circular rna omics table
+#circular rna 
 circrna_df <- py_to_r(luad$get_circular_RNA(source = "bcm"))
 circrna_df <- as.data.frame(apply(circrna_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 circrna_df_v <- circrna_df[, apply(circrna_df, 2, var, na.rm = TRUE) > 0]
 
-# pull mirna omics table
+#mirna 
 mirna_df <- py_to_r(luad$get_miRNA(source = "washu"))
 mirna_df <- as.data.frame(apply(mirna_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 mirna_df_v <- mirna_df[, apply(mirna_df, 2, var, na.rm = TRUE) > 0]
 
-# pull proteomics omics table
+#proteomics 
 prot_df <- py_to_r(luad$get_proteomics(source = "umich"))
 prot_df <- as.data.frame(apply(prot_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 prot_df_v <- prot_df[, apply(prot_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull phosphoproteomics omics table
+# phosphoproteomics 
 phospho_df <- py_to_r(luad$get_phosphoproteomics(source = "umich"))
 phospho_df <- as.data.frame(apply(phospho_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 phospho_df_v <- phospho_df[, apply(phospho_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull acetylproteomics omics table
+# acetylproteomics 
 acetylprot_df <- py_to_r(luad$get_acetylproteomics(source = "umich"))
 acetylprot_df <- as.data.frame(apply(acetylprot_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 acetylprot_df_v <- acetylprot_df[, apply(acetylprot_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 pull transcriptomics omics table
+#transcriptomics 
 rna_df <- py_to_r(luad$get_transcriptomics(source = "broad"))
 rna_df <- as.data.frame(apply(rna_df, 2, function(x) {
   x[is.nan(x)] <- mean(x, na.rm = TRUE); x
 }))
 rna_df_v <- rna_df[, apply(rna_df, 2, var, na.rm = TRUE) > 0]
 
-# 2 error six views include normal adjacent samples
-# 2 solution drop rows ending in dot n suffix
+#error six views include normal adjacent samples
+#solution droping rows ending in dot n suffix
 drop_normals <- function(df) df[!grepl("\\.N$", rownames(df)), , drop = FALSE]
 circrna_df_v <- drop_normals(circrna_df_v)
 mirna_df_v <- drop_normals(mirna_df_v)
@@ -122,8 +121,73 @@ phospho_df_v <- drop_normals(phospho_df_v)
 acetylprot_df_v <- drop_normals(acetylprot_df_v)
 rna_df_v <- drop_normals(rna_df_v)
 
-# 3 create the mofa object and train the model
-# 3 transpose each view to features by samples
+# clean feature names #
+clean_feature_names <- function(x) {
+  x <- as.character(x)
+  x <- sub("^\\('([^']+)'.*$", "\\1", x)   # tuple strings -> gene symbol
+  x <- make.unique(x)
+  x
+}
+
+for (nm in c("cnv_df", "circrna_df", "mirna_df", "prot_df",
+             "phospho_df", "acetylprot_df", "rna_df")) {
+  df <- get(nm)
+  colnames(df) <- clean_feature_names(colnames(df))
+  assign(nm, df)
+}
+
+# variance-filtered _v frames 
+zero_var_filter <- function(df) df[, apply(df, 2, var, na.rm = TRUE) > 0]
+
+cnv_df_v        <- zero_var_filter(cnv_df)
+circrna_df_v    <- zero_var_filter(circrna_df)
+mirna_df_v      <- zero_var_filter(mirna_df)
+prot_df_v       <- zero_var_filter(prot_df)
+phospho_df_v    <- zero_var_filter(phospho_df)
+acetylprot_df_v <- zero_var_filter(acetylprot_df)
+rna_df_v        <- zero_var_filter(rna_df)
+
+# variance elbow plots per view
+library(ggplot2)
+
+omics_list <- list(
+  CNV               = cnv_df_v,
+  circRNA           = circrna_df_v,
+  miRNA             = mirna_df_v,
+  Proteomics        = prot_df_v,
+  Phosphoproteomics = phospho_df_v,
+  Acetylproteomics  = acetylprot_df_v,
+  Transcriptomics   = rna_df_v
+)
+
+for (omics_name in names(omics_list)) {
+  df <- omics_list[[omics_name]]
+  vars_sorted <- sort(apply(df, 2, var, na.rm = TRUE), decreasing = TRUE)
+  plot_df <- data.frame(rank = seq_along(vars_sorted), variance = vars_sorted)
+  
+  p <- ggplot(plot_df, aes(x = rank, y = variance)) +
+    geom_line() +
+    scale_y_log10() +
+    labs(title = paste(omics_name, "variance by feature rank"),
+         x = "feature rank", y = "variance") +
+    theme_bw()
+  print(p)
+}
+
+# triming to top variable features per view
+top_variable <- function(df, n = 7000) {
+  vars <- apply(df, 2, var, na.rm = TRUE)
+  keep <- order(vars, decreasing = TRUE)[1:min(n, ncol(df))]
+  df[, keep]
+}
+
+cnv_df_v        <- top_variable(cnv_df_v, 7000)
+rna_df_v        <- top_variable(rna_df_v, 7000)
+phospho_df_v    <- top_variable(phospho_df_v, 7000)
+prot_df_v       <- top_variable(prot_df_v, 7000)
+acetylprot_df_v <- top_variable(acetylprot_df_v, 7000)
+
+# 4.2 transpose each view to features by samples
 to_feature_by_sample <- function(df) {
   colnames(df) <- make.unique(colnames(df))
   m <- t(as.matrix(df))
@@ -132,69 +196,23 @@ to_feature_by_sample <- function(df) {
 }
 
 LUAD_data <- list(
-  CNV = to_feature_by_sample(cnv_df_v),
-  circRNA = to_feature_by_sample(circrna_df_v),
-  miRNA = to_feature_by_sample(mirna_df_v),
-  Proteomics = to_feature_by_sample(prot_df_v),
+  CNV               = to_feature_by_sample(cnv_df_v),
+  circRNA           = to_feature_by_sample(circrna_df_v),
+  miRNA             = to_feature_by_sample(mirna_df_v),
+  Proteomics        = to_feature_by_sample(prot_df_v),
   Phosphoproteomics = to_feature_by_sample(phospho_df_v),
-  Acetylproteomics = to_feature_by_sample(acetylprot_df_v),
-  Transcriptomics = to_feature_by_sample(rna_df_v)
+  Acetylproteomics  = to_feature_by_sample(acetylprot_df_v),
+  Transcriptomics   = to_feature_by_sample(rna_df_v)
 )
 
-# Cleaning names in columns, fixing dowstream analysis issue 
+# correcting col names and aligning samples
+all_samples <- Reduce(intersect, lapply(LUAD_data, colnames))
 
-clean_feature_names <- function(x) {
-  x <- as.character(x)
-  
-  # If name is a tuple, keep only the first element (gene symbol)
-  x <- sub("^\\('([^']+)'.*$", "\\1", x)
-  
-  # Make duplicate gene names unique
-  x <- make.unique(x)
-  
-  x
-}
+LUAD_data <- lapply(LUAD_data, function(mat) mat[, all_samples, drop = FALSE])
 
-omics_dfs <- list(
-  cnv_df,
-  circrna_df,
-  mirna_df,
-  prot_df,
-  phospho_df,
-  acetylprot_df,
-  rna_df
-)
+sapply(LUAD_data, ncol)   
+sapply(LUAD_data, nrow)   
 
-omics_dfs <- lapply(omics_dfs, function(df) {
-  colnames(df) <- clean_feature_names(colnames(df))
-  df
-})
-
-cnv_df       <- omics_dfs[[1]]
-circrna_df   <- omics_dfs[[2]]
-mirna_df     <- omics_dfs[[3]]
-prot_df      <- omics_dfs[[4]]
-phospho_df   <- omics_dfs[[5]]
-acetylprot_df <- omics_dfs[[6]]
-rna_df       <- omics_dfs[[7]]
-
-colnames(rna_df)[1:10]
-
-# 3 error create mofa needs matching sample columns
-# 3 error views have different number of samples
-# 3 solution aligning every view to one sample set
-all_samples <- Reduce(union, lapply(LUAD_data, colnames))
-
-align_view <- function(mat, sample_ids) {
-  aligned <- matrix(NA_real_, nrow = nrow(mat), ncol = length(sample_ids),
-                    dimnames = list(rownames(mat), sample_ids))
-  aligned[, colnames(mat)] <- mat
-  aligned
-}
-LUAD_data <- lapply(LUAD_data, align_view, sample_ids = all_samples)
-
-sapply(LUAD_data, ncol)
-identical(colnames(LUAD_data$CNV), colnames(LUAD_data$Transcriptomics))
 
 # 3 create the mofa object
 MOFAobject <- create_mofa(LUAD_data)
@@ -203,24 +221,6 @@ MOFAobject
 # 3.1 plot data overview
 plot_data_overview(MOFAobject)
 
-# 4.2 error metadata rows do not match model samples
-# 4.2 solution pad stage df with missing samples as na
-all_model_samples <- colnames(LUAD_data$CNV)
-missing_samples <- setdiff(all_model_samples, stage_df$sample)
-
-na_rows <- as.data.frame(matrix(NA, nrow = length(missing_samples),
-                                ncol = ncol(stage_df) - 1))
-colnames(na_rows) <- setdiff(colnames(stage_df), "sample")
-na_rows <- cbind(sample = missing_samples, na_rows)
-
-stage_df_full <- rbind(stage_df, na_rows)
-stage_df_full <- stage_df_full[match(all_model_samples, stage_df_full$sample), ]
-
-nrow(stage_df_full) == length(all_model_samples)
-identical(stage_df_full$sample, all_model_samples)
-
-# 4.2 add sample metadata to the model
-samples_metadata(MOFAobject) <- stage_df_full
 
 # 3.2.1 define data options
 data_opts <- get_default_data_options(MOFAobject)
@@ -247,7 +247,7 @@ MOFAobject <- prepare_mofa(
 # 3.3 solution run mofa with use basilisk true
 MOFAobject <- run_mofa(MOFAobject, outfile = "MOFA2_LUAD.hdf5",
                        use_basilisk = TRUE)
-saveRDS(MOFAobject, "MOFA2_LUAD.rds")
+saveRDS(MOFAobject, "MOFA2_Object_LUAD.rds")
 
 #saving files
 dir.create("Mofa_dataframes", showWarnings = FALSE)
@@ -289,11 +289,6 @@ sort(n_views_active, decreasing = TRUE)
 
 
 
-
-
-
-
-
 # 5 characterisation of factor 1
 
 # 5.1 association analysis using built in function
@@ -307,6 +302,15 @@ correlate_factors_with_covariates(MOFAobject,
 plot_factor(MOFAobject,
             factors = 1,
             color_by = "Factor1")
+plot_factor(MOFAobject,
+            factors = 2,
+            color_by = "Factor1")
+plot_factor(MOFAobject,
+            factors = 3,
+            color_by = "Factor1")
+plot_factor(MOFAobject,
+            factors = 4,
+            color_by = "Factor1")
 
 
 
@@ -317,37 +321,75 @@ r2["Factor2", ]
 
 r2["Factor3", ]   
    
-# 5.3.1 plot feature weights for cnv view
-plot_weights(MOFAobject,
-             view = "CNV",
-             factor = 1,
-             nfeatures = 10,
-             scale = TRUE)
-
-plot_top_weights(MOFAobject,
-                 view = "CNV",
-                 factor = 1,
-                 nfeatures = 10,
-                 scale = TRUE)
-
-# 5.3.2 plot gene weights for transcriptomics view
-plot_weights(MOFAobject,
-             view = "Transcriptomics",
-             factor = 1,
-             nfeatures = 10)
-
-# 5.3.3 plot molecular signatures in input data
+# 5.3.1 plot weights 
+#factor 1
 plot_data_scatter(MOFAobject,
-                  view = "Transcriptomics",
+                  view = "CNV",
                   factor = 1,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "RNA expression")
-
+                  color_by = "stage") + labs(y = "CNV")
 plot_data_heatmap(MOFAobject,
-                  view = "Transcriptomics",
+                  view = "CNV",
                   factor = 1,
                   features = 25,
                   cluster_rows = FALSE, cluster_cols = FALSE,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
+
+plot_data_scatter(MOFAobject,
+                  view = "Proteomics",
+                  factor = 1,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Protein abundance")
+plot_data_heatmap(MOFAobject,
+                  view = "Proteomics",
+                  factor = 1,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+plot_data_scatter(MOFAobject,
+                  view = "Phosphoproteomics",
+                  factor = 1,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Phosphosite abundance")
+plot_data_heatmap(MOFAobject,
+                  view = "Phosphoproteomics",
+                  factor = 1,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+#factor 2
+plot_data_scatter(MOFAobject,
+                  view = "CNV",
+                  factor = 2,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "CNV")
+plot_data_heatmap(MOFAobject,
+                  view = "CNV",
+                  factor = 2,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+#factor 3
+plot_data_scatter(MOFAobject,
+                  view = "Acetylproteomics",
+                  factor = 3,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Acetylsite abundance")
+plot_data_heatmap(MOFAobject,
+                  view = "Acetylproteomics",
+                  factor = 3,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
