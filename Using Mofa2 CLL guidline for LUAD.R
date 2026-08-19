@@ -17,7 +17,7 @@ colnames(clin_df)
 stage_df <- data.frame(sample = rownames(clin_df),
                        stage = clin_df$tumor_stage_pathological)
 
-# add cll style covariates matching own naming
+# add cll style covariates
 age_df <- data.frame(sample = rownames(clin_df), age = clin_df$age)
 gender_df <- data.frame(sample = rownames(clin_df), gender = clin_df$sex)
 histology_df <- data.frame(sample = rownames(clin_df),
@@ -41,7 +41,7 @@ stage_df <- Reduce(function(x, y) merge(x, y, by = "sample", all = TRUE),
                         smoking_df, tumor_size_df, TTT_df,
                         treatedAfter_df, TTD_df, Died_df))
 
-# clean covariate types before use
+# clean covariate types 
 stage_df$age <- as.numeric(stage_df$age)
 stage_df$stage <- factor(stage_df$stage,
                          levels = c("Stage I", "Stage II", "Stage III", "Stage IV"),
@@ -61,14 +61,7 @@ stage_df$histology_grouped <- dplyr::case_when(
 stage_df$histology_grouped <- as.factor(stage_df$histology_grouped)
 table(stage_df$histology_grouped, useNA = "ifany")
 
-# error janitor package not installed
-# solution write small base r cleaner instead
-clean_names_base <- function(x) {
-  x <- tolower(x)
-  x <- gsub("[^a-z0-9]+", "_", x)
-  x <- gsub("^_+|_+$", "", x)
-  x
-}
+
 
 # pull cnv omics table
 cnv_df <- py_to_r(luad$get_CNV(source = "washu"))
@@ -148,9 +141,48 @@ LUAD_data <- list(
   Transcriptomics = to_feature_by_sample(rna_df_v)
 )
 
+# Cleaning names in columns, fixing dowstream analysis issue 
+
+clean_feature_names <- function(x) {
+  x <- as.character(x)
+  
+  # If name is a tuple, keep only the first element (gene symbol)
+  x <- sub("^\\('([^']+)'.*$", "\\1", x)
+  
+  # Make duplicate gene names unique
+  x <- make.unique(x)
+  
+  x
+}
+
+omics_dfs <- list(
+  cnv_df,
+  circrna_df,
+  mirna_df,
+  prot_df,
+  phospho_df,
+  acetylprot_df,
+  rna_df
+)
+
+omics_dfs <- lapply(omics_dfs, function(df) {
+  colnames(df) <- clean_feature_names(colnames(df))
+  df
+})
+
+cnv_df       <- omics_dfs[[1]]
+circrna_df   <- omics_dfs[[2]]
+mirna_df     <- omics_dfs[[3]]
+prot_df      <- omics_dfs[[4]]
+phospho_df   <- omics_dfs[[5]]
+acetylprot_df <- omics_dfs[[6]]
+rna_df       <- omics_dfs[[7]]
+
+colnames(rna_df)[1:10]
+
 # 3 error create mofa needs matching sample columns
 # 3 error views have different number of samples
-# 3 solution align every view to one sample set
+# 3 solution aligning every view to one sample set
 all_samples <- Reduce(union, lapply(LUAD_data, colnames))
 
 align_view <- function(mat, sample_ids) {
@@ -217,6 +249,15 @@ MOFAobject <- run_mofa(MOFAobject, outfile = "MOFA2_LUAD.hdf5",
                        use_basilisk = TRUE)
 saveRDS(MOFAobject, "MOFA2_LUAD.rds")
 
+#saving files
+dir.create("Mofa_dataframes", showWarnings = FALSE)
+
+df_names <- Filter(function(x) is.data.frame(get(x, envir = .GlobalEnv)), ls(envir = .GlobalEnv))
+#as rds
+for (name in df_names) {
+  saveRDS(get(name), file = file.path("Mofa_dataframes", paste0(name, ".rds")))
+}
+
 # 4 overview of the trained mofa model
 
 # 4.1 slots
@@ -243,6 +284,16 @@ sort(total_r2_per_factor, decreasing = TRUE)
 n_views_active <- rowSums(r2 > 1)
 sort(n_views_active, decreasing = TRUE)
 
+
+
+
+
+
+
+
+
+
+
 # 5 characterisation of factor 1
 
 # 5.1 association analysis using built in function
@@ -257,6 +308,15 @@ plot_factor(MOFAobject,
             factors = 1,
             color_by = "Factor1")
 
+
+
+#Identifying features in
+r2["Factor1", ]
+
+r2["Factor2", ]  
+
+r2["Factor3", ]   
+   
 # 5.3.1 plot feature weights for cnv view
 plot_weights(MOFAobject,
              view = "CNV",
