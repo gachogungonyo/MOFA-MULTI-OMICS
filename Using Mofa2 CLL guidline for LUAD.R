@@ -172,6 +172,10 @@ for (omics_name in names(omics_list)) {
          x = "feature rank", y = "variance") +
     theme_bw()
   print(p)
+  ggsave(
+    filename = file.path("Variance plots", paste0(omics_name, "_var_by_featurerank.png")),
+    plot = p, width = 8, height = 6, dpi = 300
+  )
 }
 
 # triming to top variable features per view
@@ -285,10 +289,6 @@ n_views_active <- rowSums(r2 > 1)
 sort(n_views_active, decreasing = TRUE)
 
 
-
-
-
-
 # 5 characterisation of factor 1
 
 # 5.1 association analysis using built in function
@@ -309,7 +309,7 @@ plot_factor(MOFAobject,
             factors = 3,
             color_by = "Factor1")
 plot_factor(MOFAobject,
-            factors = 4,
+            factors = 5,
             color_by = "Factor1")
 
 
@@ -320,15 +320,37 @@ r2["Factor1", ]
 r2["Factor2", ]  
 
 r2["Factor3", ]   
-   
+
+r2["Factor5", ]  
+
+head(samples_metadata(MOFAobject))
+colnames(samples_metadata(MOFAobject))
+head(LUAD_data)
+colnames(LUAD_data)
+ls()
+colnames(stage_df)
+head(stage_df)
+str(stage_df)
+
+# adding stage_df in mofaobject
+mofa_meta <- samples_metadata(MOFAobject)
+
+mofa_meta$stage <- stage_df$stage[match(mofa_meta$sample, stage_df$sample) ]
+
+samples_metadata(MOFAobject) <- mofa_meta
+
+head(samples_metadata(MOFAobject))
+
+
 # 5.3.1 plot weights 
 #factor 1
+install.packages("ggpubr")
 plot_data_scatter(MOFAobject,
                   view = "CNV",
                   factor = 1,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "CNV")
+                  color_by = "stage") + labs(y = "CNV_Factor1")
 plot_data_heatmap(MOFAobject,
                   view = "CNV",
                   factor = 1,
@@ -337,12 +359,30 @@ plot_data_heatmap(MOFAobject,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
 
+            
+plot_data_scatter(MOFAobject,
+                  view = "Transcriptomics",
+                  factor = 1,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Transcriptomics_Factor 1")
+
+plot_data_heatmap(MOFAobject,
+                  view = "Transcriptomics",
+                  factor = 1,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+
 plot_data_scatter(MOFAobject,
                   view = "Proteomics",
                   factor = 1,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "Protein abundance")
+                  color_by = "stage") + labs(y = "Protein abundance_Factor 1")
 plot_data_heatmap(MOFAobject,
                   view = "Proteomics",
                   factor = 1,
@@ -351,12 +391,33 @@ plot_data_heatmap(MOFAobject,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
 
+
+
+plot_data_scatter(MOFAobject,
+                  view = "Acetylproteomics",
+                  factor = 1,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Acetylsite abundance_Factor 1")
+
+plot_data_heatmap(MOFAobject,
+                  view = "Acetylproteomics",
+                  factor = 1,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+
+
 plot_data_scatter(MOFAobject,
                   view = "Phosphoproteomics",
                   factor = 1,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "Phosphosite abundance")
+                  color_by = "stage") + labs(y = "Phosphoproteomics_Factor 1")
+
 plot_data_heatmap(MOFAobject,
                   view = "Phosphoproteomics",
                   factor = 1,
@@ -364,13 +425,31 @@ plot_data_heatmap(MOFAobject,
                   cluster_rows = FALSE, cluster_cols = FALSE,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
+
+
+
 #factor 2
 plot_data_scatter(MOFAobject,
+                  view = "Proteomics",
+                  factor = 2,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Protein abundance_Factor2")
+plot_data_heatmap(MOFAobject,
+                  view = "Proteomics",
+                  factor = 2,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+plot_data_scatter(MOFAobject,
                   view = "CNV",
                   factor = 2,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "CNV")
+                  color_by = "stage") + labs(y = "CNV_Factor2")
 plot_data_heatmap(MOFAobject,
                   view = "CNV",
                   factor = 2,
@@ -378,18 +457,93 @@ plot_data_heatmap(MOFAobject,
                   cluster_rows = FALSE, cluster_cols = FALSE,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
-#factor 3
+
+
+
+
 plot_data_scatter(MOFAobject,
                   view = "Acetylproteomics",
+                  factor = 2,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Acetylproteomics_Factor2")
+
+plot_data_heatmap(MOFAobject,
+                  view = "Acetylproteomics",
+                  factor = 2,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+
+plot_data_scatter(MOFAobject,
+                  view = "Phosphoproteomics",
+                  factor = 2,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "Phosphoproteomics_Factor2")
+
+plot_data_heatmap(MOFAobject,
+                  view = "Phosphoproteomics",
+                  factor = 2,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+
+#FACTOR 3
+plot_data_scatter(MOFAobject,
+                  view = "CNV",
                   factor = 3,
                   features = 4,
                   sign = "positive",
-                  color_by = "stage") + labs(y = "Acetylsite abundance")
+                  color_by = "stage") + labs(y = "CNV_Factor3")
 plot_data_heatmap(MOFAobject,
-                  view = "Acetylproteomics",
+                  view = "CNV",
                   factor = 3,
                   features = 25,
                   cluster_rows = FALSE, cluster_cols = FALSE,
                   show_rownames = TRUE, show_colnames = FALSE,
                   scale = "row")
+
+
+
+#factor 5
+plot_data_scatter(MOFAobject,
+                  view = "CNV",
+                  factor = 5,
+                  features = 4,
+                  sign = "positive",
+                  color_by = "stage") + labs(y = "CNV_Factor5")
+plot_data_heatmap(MOFAobject,
+                  view = "CNV",
+                  factor = 5,
+                  features = 25,
+                  cluster_rows = FALSE, cluster_cols = FALSE,
+                  show_rownames = TRUE, show_colnames = FALSE,
+                  scale = "row")
+
+
+#saving all plots generated 
+dir.create("Mofa_plots", showWarnings = FALSE)
+
+plots.dir.path <- list.files(
+  tempdir(),
+  pattern = "rs-graphics",
+  full.names = TRUE
+)
+
+plots.png.paths <- list.files(plots.dir.path, pattern = "\\.png$", full.names = TRUE)
+
+file.copy(
+  from = plots.png.paths,
+  to = "Mofa_plots",
+  overwrite = TRUE
+)
+
+list.files("Mofa_plots")
 
